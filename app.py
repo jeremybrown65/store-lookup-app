@@ -1,19 +1,19 @@
 import streamlit as st
 import pandas as pd
-import os
 from io import BytesIO
 from difflib import get_close_matches
+import os
 
-PERSISTENT_PATH = "store_list.xlsx"
+DEFAULT_PATH = "default_store_list.xlsx"
 
 def load_store_list():
-    if os.path.exists(PERSISTENT_PATH):
-        return pd.read_excel(PERSISTENT_PATH)
-    else:
+    try:
+        return pd.read_excel(DEFAULT_PATH)
+    except Exception:
         return pd.DataFrame()
 
 def save_store_list(df):
-    df.to_excel(PERSISTENT_PATH, index=False)
+    df.to_excel(DEFAULT_PATH, index=False)
 
 def get_region_code(df, input_value):
     input_value = str(input_value).strip().lower()
@@ -27,7 +27,6 @@ def get_region_code(df, input_value):
 
 def find_closest_stores(df, input_value):
     names = df['Mall / Store Name'].astype(str).str.strip().tolist()
-    # Lowercase for better matching
     lower_name_map = {name.lower(): name for name in names}
     matches = get_close_matches(input_value.strip().lower(), lower_name_map.keys(), n=5, cutoff=0.4)
     if matches:
@@ -46,17 +45,18 @@ def filter_by_store_numbers(df, numbers):
 
 st.title("Store Lookup & Region Code Generator")
 
-st.header("1. Upload/Replace Store List")
+st.header("1. Upload or Replace Store List")
 store_file = st.file_uploader("Upload new store list (.xlsx)", type="xlsx")
 if store_file:
-    df = pd.read_excel(store_file)
-    save_store_list(df)
-    st.success("Store list updated.")
-
-store_df = load_store_list()
+    store_df = pd.read_excel(store_file)
+    save_store_list(store_df)
+    st.success("Store list uploaded and saved as the new default.")
+else:
+    store_df = load_store_list()
+    st.info("Using default store list from the repository.")
 
 if store_df.empty:
-    st.warning("No store list loaded. Please upload one above.")
+    st.warning("No store list available.")
     st.stop()
 
 st.header("2. Choose Store Mode")
