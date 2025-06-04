@@ -15,15 +15,18 @@ def load_store_list():
 def save_store_list(df):
     df.to_excel(DEFAULT_PATH, index=False)
 
-def get_region_code(df, input_value):
+def get_store_info(df, input_value):
     input_value = str(input_value).strip().lower()
     match = df[
         df['Store Number'].astype(str).str.strip().str.lower().eq(input_value) |
         df['Mall / Store Name'].astype(str).str.strip().str.lower().eq(input_value)
     ]
     if not match.empty:
-        return str(match.iloc[0]['Region Code'])
-    return None
+        store_number = str(match.iloc[0]['Store Number'])
+        region_code = str(match.iloc[0]['Region Code'])
+        premiere = str(match.iloc[0].get('Premiere', '')).upper()
+        return store_number, region_code, premiere
+    return None, None, None
 
 def find_closest_stores(df, input_value):
     names = df['Mall / Store Name'].astype(str).str.strip().tolist()
@@ -65,9 +68,12 @@ mode = st.radio("Single or Multiple Store?", ["Single", "Multiple"])
 if mode == "Single":
     store_input = st.text_input("Enter store number or name")
     if store_input:
-        region_code = get_region_code(store_df, store_input)
+        store_number, region_code, premiere = get_store_info(store_df, store_input)
         if region_code:
+            st.success(f"Store Number: {store_number}")
             st.success(f"This bills to: GL code 170.3010.{region_code}.000.6340.623020.000.0000")
+            if premiere == "X":
+                st.info("This is a Premiere store.")
         else:
             close_matches_df = find_closest_stores(store_df, store_input)
             if not close_matches_df.empty:
@@ -75,8 +81,13 @@ if mode == "Single":
                 selected = st.selectbox("Did you mean one of these?", options)
                 if selected:
                     match_row = close_matches_df[close_matches_df['Mall / Store Name'] == selected].iloc[0]
+                    store_number = str(match_row['Store Number'])
                     region_code = str(match_row['Region Code'])
+                    premiere = str(match_row.get('Premiere', '')).upper()
+                    st.success(f"Store Number: {store_number}")
                     st.success(f"This bills to: GL code 170.3010.{region_code}.000.6340.623020.000.0000")
+                    if premiere == "X":
+                        st.info("This is a Premiere store.")
             else:
                 st.error("Store not found.")
 
